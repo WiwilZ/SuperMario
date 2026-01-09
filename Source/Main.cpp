@@ -3,12 +3,12 @@
 
 #include <SFML/Graphics.hpp>
 
-#include "Headers/Animation.hpp"
-#include "Headers/ConvertSketch.hpp"
-#include "Headers/Enemy.hpp"
-#include "Headers/Global.hpp"
-#include "Headers/MapManager.hpp"
-#include "Headers/Mario.hpp"
+#include "Headers/Animation.h"
+#include "Headers/ConvertSketch.h"
+#include "Headers/Enemy.h"
+#include "Headers/Global.h"
+#include "Headers/MapManager.h"
+#include "Headers/Mario.h"
 
 
 int main() {

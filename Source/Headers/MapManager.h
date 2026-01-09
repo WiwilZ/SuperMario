@@ -6,9 +6,10 @@
 
 #include <SFML/Graphics.hpp>
 
-#include "Animation.hpp"
-#include "Global.hpp"
-#include "MapManager.hpp"
+#include "Animation.h"
+#include "Global.h"
+#include "MapManager.h"
+#include "Utils.h"
 
 
 class MapManager {
@@ -63,9 +64,9 @@ public:
     }
 
     void draw_map(bool draw_background, bool is_underground, unsigned view_x, sf::RenderWindow& window) {
-        uint16_t map_end = ceil((SCREEN_WIDTH + view_x) / static_cast<float>(CELL_SIZE));
-        uint16_t map_height = floor(map_sketch.getSize().y / 3.f);
-        uint16_t map_start = floor(view_x / static_cast<float>(CELL_SIZE));
+        uint16_t map_end = (SCREEN_WIDTH + view_x + CELL_SIZE - 1) / CELL_SIZE;
+        uint16_t map_height = map_sketch.getSize().y / 3;
+        uint16_t map_start = view_x / CELL_SIZE;
 
         //We're drawing the coin before drawing the blocks because we want it to appear behind the question block.
         if (!draw_background) {
@@ -91,123 +92,125 @@ public:
                     sf::Color pixel_right(0, 0, 0, 0);
                     sf::Color pixel_up(0, 0, 0, 0);
 
-                    if (255 == pixel.a) {
-                        if (0 < a) {
+                    if (pixel.a == 255) {
+                        if (a > 0) {
                             pixel_left = map_sketch.getPixel(a - 1, b + 2 * map_height);
                         }
-                        if (0 < b) {
+                        if (b > 0) {
                             pixel_up = map_sketch.getPixel(a, b + 2 * map_height - 1);
                         }
                         if (a < map_sketch.getSize().x - 1) {
                             pixel_right = map_sketch.getPixel(1 + a, b + 2 * map_height);
                         }
 
-                        if (sf::Color(255, 255, 255) == pixel) {
+                        if (pixel == sf::Color(255, 255, 255)) {
                             sprite_x = 8;
-                            if (sf::Color(255, 255, 255) == pixel_up) {
+                            if (pixel_up == sf::Color(255, 255, 255)) {
                                 sprite_y = 1;
                             }
-                            if (sf::Color(255, 255, 255) == pixel_left) {
-                                if (sf::Color(255, 255, 255) != pixel_right) {
+                            if (pixel_left == sf::Color(255, 255, 255)) {
+                                if (pixel_right != sf::Color(255, 255, 255)) {
                                     sprite_x = 9;
                                 }
-                            } else if (sf::Color(255, 255, 255) == pixel_right) {
+                            } else if (pixel_right == sf::Color(255, 255, 255)) {
                                 sprite_x = 7;
                             }
-                        } else if (sf::Color(146, 219, 0) == pixel) {
+                        } else if (pixel == sf::Color(146, 219, 0)) {
                             sprite_x = 5;
-                        } else if (sf::Color(146, 146, 0) == pixel) {
+                        } else if (pixel == sf::Color(146, 146, 0)) {
                             sprite_x = 4;
-                        } else if (sf::Color(146, 182, 0) == pixel) {
+                        } else if (pixel == sf::Color(146, 182, 0)) {
                             sprite_x = 6;
-                        } else if (sf::Color(0, 73, 0) == pixel) {
+                        } else if (pixel == sf::Color(0, 73, 0)) {
                             sprite_y = 1;
-                            if (sf::Color(0, 109, 0) == pixel_left) {
-                                if (sf::Color(0, 109, 0) != pixel_right) {
+                            if (pixel_left == sf::Color(0, 109, 0)) {
+                                if (pixel_right != sf::Color(0, 109, 0)) {
                                     sprite_x = 2;
                                 }
-                            } else if (sf::Color(0, 109, 0) == pixel_right) {
+                            } else if (pixel_right == sf::Color(0, 109, 0)) {
                                 sprite_x = 1;
                             }
-                        } else if (sf::Color(0, 109, 0) == pixel) {
+                        } else if (pixel == sf::Color(0, 109, 0)) {
                             sprite_y = 1;
-                            if (sf::Color(0, 73, 0) == pixel_left) {
+                            if (pixel_left == sf::Color(0, 73, 0)) {
                                 sprite_x = 3;
-                            } else if (sf::Color(0, 73, 0) == pixel_right) {
+                            } else if (pixel_right == sf::Color(0, 73, 0)) {
                                 sprite_x = 5;
                             } else {
                                 sprite_x = 4;
                             }
-                        } else if (sf::Color(109, 255, 85) == pixel) {
+                        } else if (pixel == sf::Color(109, 255, 85)) {
                             sprite_x = 12;
-                            if (sf::Color(109, 255, 85) == pixel_up) {
+                            if (pixel_up == sf::Color(109, 255, 85)) {
                                 sprite_y = 1;
                             }
                         }
 
-                        cell_sprite.setTextureRect(
-                            sf::IntRect(CELL_SIZE * sprite_x, CELL_SIZE * sprite_y, CELL_SIZE, CELL_SIZE));
+                        cell_sprite.setTextureRect(sf::IntRect(
+                            CELL_SIZE * sprite_x, CELL_SIZE * sprite_y, CELL_SIZE, CELL_SIZE
+                            ));
                         window.draw(cell_sprite);
                     }
-                } else if (Cell::Empty != map[a][b]) {
-                    if (Cell::Coin == map[a][b]) {
+                } else if (map[a][b] != Cell::Empty) {
+                    if (map[a][b] == Cell::Coin) {
                         coin_animation.set_position(CELL_SIZE * a, CELL_SIZE * b);
                         coin_animation.draw(window);
-                    } else if (Cell::QuestionBlock == map[a][b]) {
+                    } else if (map[a][b] == Cell::QuestionBlock) {
                         question_block_animation.set_position(CELL_SIZE * a, CELL_SIZE * b);
                         question_block_animation.draw(window);
                     } else {
                         //Since the underground blocks have a different look, I placed their texture 2 cells below the regular ones in the map texture.
                         sprite_y = 2 * is_underground;
 
-                        if (Cell::ActivatedQuestionBlock == map[a][b]) {
+                        if (map[a][b] == Cell::ActivatedQuestionBlock) {
                             sprite_x = 6;
                             sprite_y++;
-                        } else if (Cell::Pipe == map[a][b]) {
-                            if (sf::Color(0, 182, 0) == map_sketch.getPixel(a, b)) {
+                        } else if (map[a][b] == Cell::Pipe) {
+                            if (map_sketch.getPixel(a, b) == sf::Color(0, 182, 0)) {
                                 sprite_y = 1;
 
-                                if (Cell::Pipe == map[a - 1][b]) {
+                                if (map[a - 1][b] == Cell::Pipe) {
                                     sprite_x = 11;
                                 } else {
                                     sprite_x = 10;
                                 }
-                            } else if (sf::Color(0, 146, 0) == map_sketch.getPixel(a, b)) {
+                            } else if (map_sketch.getPixel(a, b) == sf::Color(0, 146, 0)) {
                                 sprite_y = 0;
-                                if (sf::Color(0, 146, 0) == map_sketch.getPixel(a - 1, b)) {
+                                if (map_sketch.getPixel(a - 1, b) == sf::Color(0, 146, 0)) {
                                     sprite_x = 11;
-                                } else if (sf::Color(0, 146, 0) == map_sketch.getPixel(1 + a, b)) {
+                                } else if (map_sketch.getPixel(1 + a, b) == sf::Color(0, 146, 0)) {
                                     sprite_x = 10;
                                 } else {
                                     sprite_x = 10;
-                                    if (sf::Color(0, 146, 0) == map_sketch.getPixel(a, b - 1)) {
+                                    if (map_sketch.getPixel(a, b - 1) == sf::Color(0, 146, 0)) {
                                         sprite_y = 3;
                                     } else {
                                         sprite_y = 2;
                                     }
                                 }
-                            } else if (sf::Color(0, 219, 0) == map_sketch.getPixel(a, b)) {
-                                if (sf::Color(0, 182, 0) == map_sketch.getPixel(1 + a, b)) {
+                            } else if (map_sketch.getPixel(a, b) == sf::Color(0, 219, 0)) {
+                                if (map_sketch.getPixel(1 + a, b) == sf::Color(0, 182, 0)) {
                                     sprite_x = 12;
                                 } else {
                                     sprite_x = 11;
                                 }
-                                if (sf::Color(0, 219, 0) == map_sketch.getPixel(a, b - 1)) {
+                                if (map_sketch.getPixel(a, b - 1) == sf::Color(0, 219, 0)) {
                                     sprite_y = 3;
                                 } else {
                                     sprite_y = 2;
                                 }
                             }
-                        } else if (Cell::Wall == map[a][b]) {
-                            if (sf::Color(0, 0, 0) == map_sketch.getPixel(a, b)) {
+                        } else if (map[a][b] == Cell::Wall) {
+                            if (map_sketch.getPixel(a, b) == sf::Color(0, 0, 0)) {
                                 sprite_x = 2;
                             } else {
                                 sprite_x = 3;
                             }
                         }
 
-                        cell_sprite.setTextureRect(
-                            sf::IntRect(CELL_SIZE * sprite_x, CELL_SIZE * sprite_y, CELL_SIZE, CELL_SIZE));
+                        cell_sprite.setTextureRect(sf::IntRect(
+                            CELL_SIZE * sprite_x, CELL_SIZE * sprite_y, CELL_SIZE, CELL_SIZE
+                            ));
                         window.draw(cell_sprite);
                     }
                 }
@@ -218,8 +221,9 @@ public:
         if (!draw_background) {
             for (const Object& brick_particle : brick_particles) {
                 cell_sprite.setPosition(brick_particle.x, brick_particle.y);
-                cell_sprite.setTextureRect(sf::IntRect(0.25f * CELL_SIZE, CELL_SIZE * (0.25f + 2 * is_underground),
-                                                       0.5f * CELL_SIZE, 0.5f * CELL_SIZE));
+                cell_sprite.setTextureRect(sf::IntRect(
+                    0.25f * CELL_SIZE, CELL_SIZE * (0.25f + 2 * is_underground), 0.5f * CELL_SIZE, 0.5f * CELL_SIZE
+                    ));
                 window.draw(cell_sprite);
             }
         }
@@ -250,11 +254,11 @@ public:
             brick_particle.y += brick_particle.vertical_speed;
         }
 
-        std::erase_if(brick_particles, [](const auto& brick_particle) {
-            return SCREEN_HEIGHT <= brick_particle.y;
+        unordered_erase_if(brick_particles, [](const Object& brick_particle) {
+            return brick_particle.y >= SCREEN_HEIGHT;
         });
-        std::erase_if(question_block_coins, [](const auto& question_block_coin) {
-            return 0 <= question_block_coin.vertical_speed;
+        unordered_erase_if(question_block_coins, [](const Object& question_block_coin) {
+            return question_block_coin.vertical_speed >= 0;
         });
 
         coin_animation.update();

@@ -6,11 +6,12 @@
 
 #include <SFML/Graphics.hpp>
 
-#include "Animation.hpp"
-#include "Global.hpp"
-#include "MapManager.hpp"
-#include "Mario.hpp"
-#include "Mushroom.hpp"
+#include "Animation.h"
+#include "Global.h"
+#include "MapManager.h"
+#include "Mario.h"
+#include "Mushroom.h"
+#include "Utils.h"
 
 
 class Mario {
@@ -73,12 +74,12 @@ public:
 
     void die(bool instant_death) {
         //Mario instantly dies and it doesn't matter if he's big or small.
-        if (1 == instant_death) {
+        if (instant_death) {
             dead = true;
             texture.loadFromFile(powerup_state == 0 ? "Resources/Images/MarioDeath.png" :
-                                     "Resources/Images/BigMarioDeath.png");
-        } else if (0 == growth_timer && 0 == invincible_timer) { //Mario dies, unless he's big.
-            if (0 == powerup_state) {
+                "Resources/Images/BigMarioDeath.png");
+        } else if (growth_timer == 0 && invincible_timer == 0) { //Mario dies, unless he's big.
+            if (powerup_state == 0) {
                 dead = true;
                 texture.loadFromFile("Resources/Images/MarioDeath.png");
             } else {
@@ -95,18 +96,18 @@ public:
 
     void draw(sf::RenderWindow& window) {
         //When Mario is invincible, his sprite will blink.
-        if (0 == invincible_timer / MARIO_BLINKING % 2) {
+        if (invincible_timer / MARIO_BLINKING % 2 == 0) {
             bool draw_sprite = true;
             //When Mario is growing, his sprite will switch between being big and small.
-            const bool draw_big = 0 == growth_timer / MARIO_BLINKING % 2;
+            const bool draw_big = growth_timer / MARIO_BLINKING % 2 == 0;
 
             sprite.setPosition(round(x), round(y));
 
             if (!dead) {
-                if (0 < powerup_state) {
+                if (powerup_state > 0) {
                     if (crouching) {
                         texture.loadFromFile(draw_big ? "Resources/Images/BigMarioCrouch.png" :
-                                                 "Resources/Images/MarioIdle.png");
+                            "Resources/Images/MarioIdle.png");
                     } else if (!on_ground) {
                         if (!draw_big) {
                             sprite.setPosition(round(x), CELL_SIZE + round(y));
@@ -115,22 +116,21 @@ public:
                             texture.loadFromFile("Resources/Images/BigMarioJump.png");
                         }
                     } else {
-                        if (0 == horizontal_speed) {
+                        if (horizontal_speed == 0) {
                             if (!draw_big) {
                                 sprite.setPosition(round(x), CELL_SIZE + round(y));
                                 texture.loadFromFile("Resources/Images/MarioIdle.png");
                             } else {
                                 texture.loadFromFile("Resources/Images/BigMarioIdle.png");
                             }
-                        } else if ((0 < horizontal_speed && !sf::Keyboard::isKeyPressed(sf::Keyboard::Right) &&
-                                sf::Keyboard::isKeyPressed(sf::Keyboard::Left)) ||
-                            (0 > horizontal_speed && !sf::Keyboard::isKeyPressed(sf::Keyboard::Left) &&
-                                sf::Keyboard::isKeyPressed(sf::Keyboard::Right))) {
+                        } else if (horizontal_speed > 0 && !sf::Keyboard::isKeyPressed(sf::Keyboard::Right)
+                            && sf::Keyboard::isKeyPressed(sf::Keyboard::Left)
+                            || horizontal_speed < 0 && !sf::Keyboard::isKeyPressed(sf::Keyboard::Left)
+                            && sf::Keyboard::isKeyPressed(sf::Keyboard::Right)) {
+                            texture.loadFromFile(draw_big ? "Resources/Images/BigMarioBrake.png" :
+                                "Resources/Images/MarioBrake.png");
                             if (!draw_big) {
                                 sprite.setPosition(round(x), CELL_SIZE + round(y));
-                                texture.loadFromFile("Resources/Images/MarioBrake.png");
-                            } else {
-                                texture.loadFromFile("Resources/Images/BigMarioBrake.png");
                             }
                         } else {
                             draw_sprite = false;
@@ -149,12 +149,12 @@ public:
                 } else if (!on_ground) {
                     texture.loadFromFile("Resources/Images/MarioJump.png");
                 } else {
-                    if (0 == horizontal_speed) {
+                    if (horizontal_speed == 0) {
                         texture.loadFromFile("Resources/Images/MarioIdle.png");
-                    } else if ((0 < horizontal_speed && !sf::Keyboard::isKeyPressed(sf::Keyboard::Right) &&
-                            sf::Keyboard::isKeyPressed(sf::Keyboard::Left)) ||
-                        (0 > horizontal_speed && !sf::Keyboard::isKeyPressed(sf::Keyboard::Left) &&
-                            sf::Keyboard::isKeyPressed(sf::Keyboard::Right))) {
+                    } else if (horizontal_speed > 0 && !sf::Keyboard::isKeyPressed(sf::Keyboard::Right)
+                        && sf::Keyboard::isKeyPressed(sf::Keyboard::Left)
+                        || horizontal_speed < 0 && !sf::Keyboard::isKeyPressed(sf::Keyboard::Left)
+                        && sf::Keyboard::isKeyPressed(sf::Keyboard::Right)) {
                         texture.loadFromFile("Resources/Images/MarioBrake.png");
                     } else {
                         draw_sprite = false;
@@ -211,8 +211,6 @@ public:
 
         texture.loadFromFile("Resources/Images/MarioIdle.png");
 
-        sprite.setTexture(texture);
-
         big_walk_animation.set_animation_speed(MARIO_WALK_ANIMATION_SPEED);
         big_walk_animation.set_flipped(0);
 
@@ -231,9 +229,8 @@ public:
 
     void update(unsigned view_x, MapManager& map_manager) {
         //We make Mario bounce after updating all the enemies to prevent a bug (Go to Mario.hpp for explanation).
-        if (0 != enemy_bounce_speed) {
+        if (enemy_bounce_speed != 0) {
             vertical_speed = enemy_bounce_speed;
-
             enemy_bounce_speed = 0;
         }
 
@@ -255,28 +252,28 @@ public:
             on_ground = false;
 
             if (!crouching) {
-                if (!sf::Keyboard::isKeyPressed(sf::Keyboard::Right) &&
-                    sf::Keyboard::isKeyPressed(sf::Keyboard::Left)) {
+                if (!sf::Keyboard::isKeyPressed(sf::Keyboard::Right)
+                    && sf::Keyboard::isKeyPressed(sf::Keyboard::Left)) {
                     moving = true;
                     horizontal_speed = std::max(horizontal_speed - MARIO_ACCELERATION, -MARIO_WALK_SPEED);
                 }
 
-                if (!sf::Keyboard::isKeyPressed(sf::Keyboard::Left) &&
-                    sf::Keyboard::isKeyPressed(sf::Keyboard::Right)) {
+                if (!sf::Keyboard::isKeyPressed(sf::Keyboard::Left)
+                    && sf::Keyboard::isKeyPressed(sf::Keyboard::Right)) {
                     moving = true;
                     horizontal_speed = std::min(MARIO_ACCELERATION + horizontal_speed, MARIO_WALK_SPEED);
                 }
             }
 
             if (!moving) {
-                if (0 < horizontal_speed) {
+                if (horizontal_speed > 0) {
                     horizontal_speed = std::max<float>(0, horizontal_speed - MARIO_ACCELERATION);
-                } else if (0 > horizontal_speed) {
+                } else if (horizontal_speed < 0) {
                     horizontal_speed = std::min<float>(0, MARIO_ACCELERATION + horizontal_speed);
                 }
             }
 
-            if (0 < powerup_state) {
+            if (powerup_state > 0) {
                 if (sf::Keyboard::isKeyPressed(sf::Keyboard::C) || sf::Keyboard::isKeyPressed(sf::Keyboard::Down)) {
                     if (!crouching) {
                         crouching = true;
@@ -287,25 +284,24 @@ public:
                     hit_box.top -= CELL_SIZE;
 
                     //Making sure we can stand up without hitting anything.
-                    collision = map_manager.map_collision({
-                                                              Cell::ActivatedQuestionBlock, Cell::Brick, Cell::Pipe,
-                                                              Cell::QuestionBlock, Cell::Wall
-                                                          }, hit_box);
+                    collision = map_manager.map_collision(
+                        {Cell::ActivatedQuestionBlock, Cell::Brick, Cell::Pipe, Cell::QuestionBlock, Cell::Wall},
+                        hit_box
+                        );
 
                     if (std::ranges::all_of(collision, [](const uint8_t e) {
-                        return 0 == e;
+                        return e == 0;
                     })) {
                         crouching = false;
                         y -= CELL_SIZE;
                     } else {
-                        collision = map_manager.map_collision({
-                                                                  Cell::ActivatedQuestionBlock, Cell::Pipe,
-                                                                  Cell::QuestionBlock, Cell::Wall
-                                                              }, hit_box);
+                        collision = map_manager.map_collision(
+                            {Cell::ActivatedQuestionBlock, Cell::Pipe, Cell::QuestionBlock, Cell::Wall}, hit_box
+                            );
 
                         //But if it happens to be bricks, we'll destroy them.
                         if (std::ranges::all_of(collision, [](const uint8_t e) {
-                            return 0 == e;
+                            return e == 0;
                         })) {
                             crouching = false;
                             y -= CELL_SIZE;
@@ -324,19 +320,18 @@ public:
             hit_box = get_hit_box();
             hit_box.left += horizontal_speed;
 
-            collision = map_manager.map_collision({
-                                                      Cell::ActivatedQuestionBlock, Cell::Brick, Cell::Pipe,
-                                                      Cell::QuestionBlock, Cell::Wall
-                                                  }, hit_box);
+            collision = map_manager.map_collision(
+                {Cell::ActivatedQuestionBlock, Cell::Brick, Cell::Pipe, Cell::QuestionBlock, Cell::Wall}, hit_box
+                );
 
             if (!std::ranges::all_of(collision, [](const uint8_t e) {
                 return 0 == e;
             })) {
                 moving = false;
 
-                if (0 < horizontal_speed) {
+                if (horizontal_speed > 0) {
                     x = CELL_SIZE * (ceil((horizontal_speed + x) / CELL_SIZE) - 1);
-                } else if (0 > horizontal_speed) {
+                } else if (horizontal_speed < 0) {
                     x = CELL_SIZE * (1 + floor((horizontal_speed + x) / CELL_SIZE));
                 }
 
@@ -348,16 +343,14 @@ public:
             hit_box = get_hit_box();
             hit_box.top++;
 
-            collision = map_manager.map_collision({
-                                                      Cell::ActivatedQuestionBlock, Cell::Brick, Cell::Pipe,
-                                                      Cell::QuestionBlock, Cell::Wall
-                                                  }, hit_box);
+            collision = map_manager.map_collision(
+                {Cell::ActivatedQuestionBlock, Cell::Brick, Cell::Pipe, Cell::QuestionBlock, Cell::Wall}, hit_box
+                );
 
             if (sf::Keyboard::isKeyPressed(sf::Keyboard::Up) || sf::Keyboard::isKeyPressed(sf::Keyboard::Z)) {
-                if (0 == vertical_speed && !std::ranges::all_of(collision,
-                                                                [](const uint8_t e) {
-                                                                    return 0 == e;
-                                                                })) {
+                if (vertical_speed == 0 && !std::ranges::all_of(collision, [](const uint8_t e) {
+                    return 0 == e;
+                })) {
                     vertical_speed = MARIO_JUMP_SPEED;
                     jump_timer = MARIO_JUMP_TIMER;
                 } else if (0 < jump_timer) { //The longer we press the jump button, the higher Mario jumps.
@@ -374,17 +367,16 @@ public:
             hit_box = get_hit_box();
             hit_box.top += vertical_speed;
 
-            collision = map_manager.map_collision({
-                                                      Cell::ActivatedQuestionBlock, Cell::Brick, Cell::Pipe,
-                                                      Cell::QuestionBlock, Cell::Wall
-                                                  }, hit_box);
+            collision = map_manager.map_collision(
+                {Cell::ActivatedQuestionBlock, Cell::Brick, Cell::Pipe, Cell::QuestionBlock, Cell::Wall}, hit_box
+                );
 
             if (!std::ranges::all_of(collision, [](const uint8_t e) {
-                return 0 == e;
+                return e == 0;
             })) {
-                if (0 > vertical_speed) {
+                if (vertical_speed < 0) {
                     //Destroying bricks!!!!
-                    if (!crouching && 0 < powerup_state) {
+                    if (!crouching && powerup_state > 0) {
                         map_manager.map_collision({Cell::Brick}, cells, hit_box);
 
                         for (const sf::Vector2i& cell : cells) {
@@ -400,7 +392,7 @@ public:
                         map_manager.set_map_cell(cell.x, cell.y, Cell::ActivatedQuestionBlock);
 
                         //It can be either a mushroom or a coin, depending on the color of the pixel in the sketch.
-                        if (sf::Color(255, 73, 85) == map_manager.get_map_sketch_pixel(cell.x, cell.y)) {
+                        if (map_manager.get_map_sketch_pixel(cell.x, cell.y) == sf::Color(255, 73, 85)) {
                             mushrooms.emplace_back(CELL_SIZE * cell.x, CELL_SIZE * cell.y);
                         } else {
                             map_manager.add_question_block_coin(CELL_SIZE * cell.x, CELL_SIZE * cell.y);
@@ -408,7 +400,7 @@ public:
                     }
 
                     y = CELL_SIZE * (1 + floor((vertical_speed + y) / CELL_SIZE));
-                } else if (0 < vertical_speed) {
+                } else if (vertical_speed > 0) {
                     y = CELL_SIZE * (ceil((vertical_speed + y) / CELL_SIZE) - 1);
                 }
 
@@ -418,23 +410,20 @@ public:
                 y += vertical_speed;
             }
 
-            if (0 == horizontal_speed) {
-                if (moving) {
-                    flipped = !flipped;
-                }
-            } else if (0 < horizontal_speed) {
+            if (horizontal_speed > 0) {
                 flipped = false;
-            } else if (0 > horizontal_speed) {
+            } else if (horizontal_speed < 0) {
                 flipped = true;
+            } else if (moving) {
+                flipped = !flipped;
             }
 
             hit_box = get_hit_box();
             hit_box.top++;
 
-            collision = map_manager.map_collision({
-                                                      Cell::ActivatedQuestionBlock, Cell::Brick, Cell::Pipe,
-                                                      Cell::QuestionBlock, Cell::Wall
-                                                  }, hit_box);
+            collision = map_manager.map_collision(
+                {Cell::ActivatedQuestionBlock, Cell::Brick, Cell::Pipe, Cell::QuestionBlock, Cell::Wall}, hit_box
+                );
 
             if (!std::ranges::all_of(collision, [](const uint8_t e) {
                 return e == 0;
@@ -444,9 +433,9 @@ public:
 
             for (Mushroom& mushroom : mushrooms) {
                 //Mushroom eating and becoming BIG, STRONG, MASCULINE!!!!
-                if (1 == get_hit_box().intersects(mushroom.get_hit_box())) {
+                if (get_hit_box().intersects(mushroom.get_hit_box())) {
                     mushroom.set_dead(true);
-                    if (0 == powerup_state) {
+                    if (powerup_state == 0) {
                         powerup_state = 1;
                         growth_timer = MARIO_GROWTH_DURATION;
                         y -= CELL_SIZE;
@@ -454,7 +443,7 @@ public:
                 }
             }
 
-            if (0 < invincible_timer) {
+            if (invincible_timer > 0) {
                 invincible_timer--;
             }
 
@@ -467,7 +456,7 @@ public:
                 map_manager.set_map_cell(cell.x, cell.y, Cell::Empty);
             }
 
-            if (0 < growth_timer) {
+            if (growth_timer > 0) {
                 growth_timer--;
             }
 
@@ -475,20 +464,22 @@ public:
                 die(true);
             }
 
-            if (0 == powerup_state) {
+            if (powerup_state == 0) {
                 walk_animation.set_animation_speed(
-                    MARIO_WALK_ANIMATION_SPEED * MARIO_WALK_SPEED / abs(horizontal_speed));
+                    MARIO_WALK_ANIMATION_SPEED * MARIO_WALK_SPEED / abs(horizontal_speed)
+                    );
                 walk_animation.update();
             } else {
                 big_walk_animation.set_animation_speed(
-                    MARIO_WALK_ANIMATION_SPEED * MARIO_WALK_SPEED / abs(horizontal_speed));
+                    MARIO_WALK_ANIMATION_SPEED * MARIO_WALK_SPEED / abs(horizontal_speed)
+                    );
                 big_walk_animation.update();
             }
         } else {
-            if (0 == death_timer) {
+            if (death_timer == 0) {
                 vertical_speed = std::min(GRAVITY + vertical_speed, MAX_VERTICAL_SPEED);
                 y += vertical_speed;
-            } else if (1 == death_timer) {
+            } else if (death_timer == 1) {
                 vertical_speed = MARIO_JUMP_SPEED;
             }
 
@@ -496,7 +487,7 @@ public:
         }
 
         //Deleting mushrooms from the vector.
-        std::erase_if(mushrooms, [](const Mushroom& mushroom) {
+        unordered_erase_if(mushrooms, [](const Mushroom& mushroom) {
             return mushroom.get_dead();
         });
     }

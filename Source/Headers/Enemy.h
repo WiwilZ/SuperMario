@@ -7,9 +7,9 @@
 #include <SFML/Graphics/Rect.hpp>
 #include <SFML/Graphics/RenderWindow.hpp>
 
-#include "Global.hpp"
-#include "MapManager.hpp"
-#include "Mario.hpp"
+#include "Global.h"
+#include "MapManager.h"
+#include "Mario.h"
 
 
 class Enemy : public std::enable_shared_from_this<Enemy> {

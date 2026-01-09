@@ -5,9 +5,9 @@
 
 #include <SFML/Graphics.hpp>
 
-#include "Global.hpp"
-#include "MapManager.hpp"
-#include "Mushroom.hpp"
+#include "Global.h"
+#include "MapManager.h"
+#include "Mushroom.h"
 
 
 class Mushroom {
@@ -24,8 +24,10 @@ class Mushroom {
     sf::Sprite sprite;
 
 public:
-    Mushroom(float x, float y) : x(x), y(y), start_y(y) {
+    Mushroom(float x, float y) :
+        x(x), y(y), start_y(y) {
         texture.loadFromFile("Resources/Images/Mushroom.png");
+        sprite.setTexture(texture);
     }
 
     bool get_dead() const {
@@ -36,7 +38,6 @@ public:
         if (-CELL_SIZE < round(y) && round(x) > static_cast<int>(view_x) - CELL_SIZE && round(x) < SCREEN_WIDTH +
             view_x && round(y) < SCREEN_HEIGHT) {
             sprite.setPosition(round(x), round(y));
-            sprite.setTexture(texture);
             window.draw(sprite);
         }
     }
@@ -61,12 +62,13 @@ public:
 
                     std::vector<uint8_t> collision = map_manager.map_collision(
                         {Cell::ActivatedQuestionBlock, Cell::Brick, Cell::Pipe, Cell::QuestionBlock, Cell::Wall},
-                        sf::FloatRect(x, vertical_speed + y, CELL_SIZE, CELL_SIZE));
+                        sf::FloatRect(x, vertical_speed + y, CELL_SIZE, CELL_SIZE)
+                        );
 
                     if (!std::ranges::all_of(collision, [](const uint8_t e) {
-                        return 0 == e;
+                        return e == 0;
                     })) {
-                        if (0 > vertical_speed) {
+                        if (vertical_speed < 0) {
                             y = CELL_SIZE * (1 + floor((vertical_speed + y) / CELL_SIZE));
                         } else {
                             y = CELL_SIZE * (ceil((vertical_speed + y) / CELL_SIZE) - 1);
@@ -86,9 +88,9 @@ public:
                                                           }, horizontal_hit_box);
 
                     if (!std::ranges::all_of(collision, [](const uint8_t e) {
-                        return 0 == e;
+                        return e == 0;
                     })) {
-                        if (0 < horizontal_direction) {
+                        if (horizontal_direction > 0) {
                             x = CELL_SIZE * (ceil((MUSHROOM_SPEED * horizontal_direction + x) / CELL_SIZE) - 1);
                         } else {
                             x = CELL_SIZE * (1 + floor((MUSHROOM_SPEED * horizontal_direction + x) / CELL_SIZE));
@@ -100,8 +102,8 @@ public:
                 }
             }
 
-            if (SCREEN_HEIGHT <= y) {
-                dead = 1;
+            if (y >= SCREEN_HEIGHT) {
+                dead = true;
             }
         }
     }

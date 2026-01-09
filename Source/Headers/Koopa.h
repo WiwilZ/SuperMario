@@ -5,12 +5,12 @@
 
 #include <SFML/Graphics.hpp>
 
-#include "Animation.hpp"
-#include "Enemy.hpp"
-#include "Global.hpp"
-#include "Koopa.hpp"
-#include "MapManager.hpp"
-#include "Mario.hpp"
+#include "Animation.h"
+#include "Enemy.h"
+#include "Global.h"
+#include "Koopa.h"
+#include "MapManager.h"
+#include "Mario.h"
 
 
 class Koopa : public Enemy {
@@ -30,26 +30,22 @@ class Koopa : public Enemy {
     //2 - Koopa shell slide
     uint8_t state = 0;
 
-    uint16_t get_out_timer;
+    uint16_t get_out_timer = KOOPA_GET_OUT_DURATION;
 
     sf::Texture texture;
     sf::Sprite sprite;
 
-    Animation get_out_animation;
-    Animation walk_animation;
+    Animation get_out_animation{CELL_SIZE, "Resources/Images/KoopaGetOut.png", KOOPA_GET_OUT_ANIMATION_SPEED};
+    Animation walk_animation{CELL_SIZE, "Resources/Images/KoopaWalk.png", KOOPA_WALK_ANIMATION_SPEED};
 
 public:
     Koopa(bool is_underground, float x, float y) :
-        Enemy(x, y),
-        is_underground(is_underground),
-        get_out_timer(KOOPA_GET_OUT_DURATION),
-        get_out_animation(CELL_SIZE, "Resources/Images/KoopaGetOut.png", KOOPA_GET_OUT_ANIMATION_SPEED),
-        walk_animation(CELL_SIZE, "Resources/Images/KoopaWalk.png", KOOPA_WALK_ANIMATION_SPEED) {
+        Enemy(x, y), is_underground(is_underground) {
         horizontal_speed = -KOOPA_SPEED;
-        if (!is_underground) {
-            texture.loadFromFile("Resources/Images/KoopaShell.png");
-        } else {
-            texture.loadFromFile("Resources/Images/UndergroundKoopaShell.png");
+        texture.loadFromFile(is_underground ? "Resources/Images/UndergroundKoopaShell.png" :
+            "Resources/Images/KoopaShell.png");
+        sprite.setTexture(texture);
+        if (is_underground) {
             get_out_animation.set_texture_location("Resources/Images/UndergroundKoopaGetOut.png");
             walk_animation.set_texture_location("Resources/Images/UndergroundKoopaWalk.png");
         }
@@ -71,25 +67,26 @@ public:
             no_collision_dying = true;
             vertical_speed = 0.5f * MARIO_JUMP_SPEED;
             texture.loadFromFile(is_underground ? "Resources/Images/UndergroundKoopaDeath.png" :
-                                     "Resources/Images/KoopaDeath.png");
+                "Resources/Images/KoopaDeath.png");
         }
     }
 
     void draw(unsigned view_x, sf::RenderWindow& window) override {
-        if (-CELL_SIZE < round(y) && round(x) > static_cast<int>(view_x) - CELL_SIZE && round(x) < SCREEN_WIDTH +
-            view_x && round(y) < SCREEN_HEIGHT) {
-            if (0 < state || no_collision_dying) {
-                if (!get_dead(false) && 1 == state && get_out_timer <= 0.25f * KOOPA_GET_OUT_DURATION) {
-                    get_out_animation.set_position(round(x), round(y));
+        int posx = std::round(x);
+        int posy = std::round(y);
+        if (-CELL_SIZE < posy && posx > static_cast<int>(view_x) - CELL_SIZE
+            && posx < SCREEN_WIDTH + view_x && posy < SCREEN_HEIGHT) {
+            if (state > 0 || no_collision_dying) {
+                if (!get_dead(false) && state == 1 && get_out_timer <= 0.25f * KOOPA_GET_OUT_DURATION) {
+                    get_out_animation.set_position(posx, posy);
                     get_out_animation.draw(window);
                 } else {
-                    sprite.setPosition(round(x), round(y));
-                    sprite.setTexture(texture);
+                    sprite.setPosition(posx, posy);
                     window.draw(sprite);
                 }
             } else {
                 walk_animation.set_flipped(flipped);
-                walk_animation.set_position(round(x), round(y));
+                walk_animation.set_position(posx, posy);
                 walk_animation.draw(window);
             }
         }
@@ -100,8 +97,8 @@ public:
         //I've already explained most of the code here in the Mario and Goomba classes.
         //I'm so bad at writing comments lol.
 
-        if (-CELL_SIZE < y && x >= static_cast<int>(view_x) - CELL_SIZE - ENTITY_UPDATE_AREA && x < ENTITY_UPDATE_AREA
-            + SCREEN_WIDTH + view_x && y < SCREEN_HEIGHT) {
+        if (-CELL_SIZE < y && x >= static_cast<int>(view_x) - CELL_SIZE - ENTITY_UPDATE_AREA
+            && x < ENTITY_UPDATE_AREA + SCREEN_WIDTH + view_x && y < SCREEN_HEIGHT) {
             vertical_speed = std::min(GRAVITY + vertical_speed, MAX_VERTICAL_SPEED);
 
             if (!get_dead(false)) {
@@ -109,20 +106,17 @@ public:
 
                 hit_box.top += vertical_speed;
 
-                std::vector<uint8_t> collision = map_manager.map_collision({
-                                                                               Cell::ActivatedQuestionBlock,
-                                                                               Cell::Brick,
-                                                                               Cell::Pipe,
-                                                                               Cell::QuestionBlock, Cell::Wall
-                                                                           }, hit_box);
+                auto collision = map_manager.map_collision(
+                    {Cell::ActivatedQuestionBlock, Cell::Brick, Cell::Pipe, Cell::QuestionBlock, Cell::Wall}, hit_box
+                    );
 
                 if (!std::ranges::all_of(collision, [](const auto e) {
                     return e == 0;
                 })) {
-                    if (0 > vertical_speed) {
-                        y = CELL_SIZE * (1 + floor((vertical_speed + y) / CELL_SIZE));
+                    if (vertical_speed < 0) {
+                        y = CELL_SIZE * (1 + std::floor((vertical_speed + y) / CELL_SIZE));
                     } else {
-                        y = CELL_SIZE * (ceil((vertical_speed + y) / CELL_SIZE) - 1);
+                        y = CELL_SIZE * (std::ceil((vertical_speed + y) / CELL_SIZE) - 1);
                     }
                     vertical_speed = 0;
                 } else {
@@ -150,31 +144,29 @@ public:
                 hit_box = get_hit_box();
                 hit_box.left += horizontal_speed;
 
-                collision = map_manager.map_collision({
-                                                          Cell::ActivatedQuestionBlock, Cell::Brick, Cell::Pipe,
-                                                          Cell::QuestionBlock, Cell::Wall
-                                                      }, hit_box);
+                collision = map_manager.map_collision(
+                    {Cell::ActivatedQuestionBlock, Cell::Brick, Cell::Pipe, Cell::QuestionBlock, Cell::Wall}, hit_box
+                    );
 
-                if (!no_collision_dying && !std::ranges::all_of(collision,
-                                                                [](const auto e) {
-                                                                    return e == 0;
-                                                                })) {
-                    if (0 < horizontal_speed) {
-                        x = CELL_SIZE * (ceil((horizontal_speed + x) / CELL_SIZE) - 1);
+                if (!no_collision_dying && !std::ranges::all_of(collision, [](const auto e) {
+                    return e == 0;
+                })) {
+                    if (horizontal_speed > 0) {
+                        x = CELL_SIZE * (std::ceil((horizontal_speed + x) / CELL_SIZE) - 1);
                     } else {
-                        x = CELL_SIZE * (1 + floor((horizontal_speed + x) / CELL_SIZE));
+                        x = CELL_SIZE * (1 + std::floor((horizontal_speed + x) / CELL_SIZE));
                     }
                     horizontal_speed *= -1;
                 } else {
                     bool changed = false;
 
                     for (const auto& enemy : enemies) {
-                        if (shared_from_this() != enemy && !enemy->get_dead(false) && hit_box.
-                            intersects(enemy->get_hit_box())) {
-                            if (0 == state) {
+                        if (shared_from_this() != enemy && !enemy->get_dead(false)
+                            && hit_box.intersects(enemy->get_hit_box())) {
+                            if (state == 0) {
                                 changed = true;
                                 horizontal_speed *= -1;
-                            } else if (2 == state) {
+                            } else if (state == 2) {
                                 enemy->die(2);
                             }
                             break;
@@ -190,7 +182,7 @@ public:
                     if (check_collision) {
                         switch (state) {
                         case 0: //Turning into a shell.
-                            if (0 < mario.get_vertical_speed()) {
+                            if (mario.get_vertical_speed() > 0) {
                                 //We check the collision only once after we collide with Mario.
                                 check_collision = false;
                                 horizontal_speed = 0;
@@ -198,31 +190,31 @@ public:
                                 get_out_timer = KOOPA_GET_OUT_DURATION;
                                 mario.set_vertical_speed(0.5f * MARIO_JUMP_SPEED);
                             } else {
-                                mario.die(0);
+                                mario.die(false);
                             }
                             break;
                         case 1: //Start sliding.
                             check_collision = false;
                             state = 2;
                             //The direction is based on where Mario kicked Koopa.
-                            if (x < mario.get_x()) {
+                            if (mario.get_x() > x) {
                                 horizontal_speed = -KOOPA_SHELL_SPEED;
                             } else {
                                 horizontal_speed = KOOPA_SHELL_SPEED;
                             }
-                            if (0 < mario.get_vertical_speed()) {
+                            if (mario.get_vertical_speed() > 0) {
                                 mario.set_vertical_speed(0.5f * MARIO_JUMP_SPEED);
                             }
                             break;
                         default:
-                            if (0 < mario.get_vertical_speed()) { //Stop sliding.
+                            if (mario.get_vertical_speed() > 0) { //Stop sliding.
                                 check_collision = false;
                                 horizontal_speed = 0;
                                 state = 1;
                                 get_out_timer = KOOPA_GET_OUT_DURATION;
                                 mario.set_vertical_speed(0.5f * MARIO_JUMP_SPEED);
-                            } else if ((0 < horizontal_speed && x < mario.get_x()) ||
-                                (0 > horizontal_speed && x > mario.get_x())) {
+                            } else if (horizontal_speed > 0 && mario.get_x() > x
+                                || horizontal_speed < 0 && mario.get_x() < x) {
                                 //Don't stand in front of a sliding shell.
                                 mario.die(false);
                             }
@@ -233,19 +225,19 @@ public:
                     check_collision = true;
                 }
 
-                if (0 < horizontal_speed) {
-                    flipped = 0;
-                } else if (0 > horizontal_speed) {
-                    flipped = 1;
+                if (horizontal_speed > 0) {
+                    flipped = false;
+                } else if (horizontal_speed < 0) {
+                    flipped = true;
                 }
 
                 //Koopa can get out of his shell here.
-                if (1 == state) {
+                if (state == 1) {
                     get_out_timer--;
 
-                    if (0 == get_out_timer) {
+                    if (get_out_timer == 0) {
                         state = 0;
-                        if (0 == flipped) {
+                        if (!flipped) {
                             horizontal_speed = KOOPA_SPEED;
                         } else {
                             horizontal_speed = -KOOPA_SPEED;

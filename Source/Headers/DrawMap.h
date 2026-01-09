@@ -1,19 +1,17 @@
 #pragma once
 
-#include <cmath>
-
 #include <SFML/Graphics.hpp>
 
-#include "Global.hpp"
+#include "Global.h"
 
 
 inline void draw_map(unsigned view_x, const sf::Image& map_sketch, sf::RenderWindow& window,
                      const sf::Texture& map_texture, const Map& map) {
     //OPTIMIZATION!
     //We'll only draw the part of the map that is visible on the screen.
-    uint16_t map_end = ceil((view_x + SCREEN_WIDTH) / static_cast<float>(CELL_SIZE));
-    uint16_t map_height = floor(map_sketch.getSize().y / 3.f);
-    uint16_t map_start = floor(view_x / static_cast<float>(CELL_SIZE));
+    uint16_t map_end = (view_x + SCREEN_WIDTH + CELL_SIZE - 1) / CELL_SIZE;
+    uint16_t map_height = map_sketch.getSize().y / 3;
+    uint16_t map_start = view_x / CELL_SIZE;
 
     sf::Sprite cell_sprite(map_texture);
 
@@ -30,12 +28,12 @@ inline void draw_map(unsigned view_x, const sf::Image& map_sketch, sf::RenderWin
             cell_sprite.setPosition(CELL_SIZE * a, CELL_SIZE * b);
 
             //Ignore the empty pixels.
-            if (255 == pixel.a) {
+            if (pixel.a == 255) {
                 //Here we're getting pixels around the pixel we're currently checking.
-                if (0 < a) {
+                if (a > 0) {
                     pixel_left = map_sketch.getPixel(a - 1, b + 2 * map_height);
                 }
-                if (0 < b) {
+                if (b > 0) {
                     pixel_up = map_sketch.getPixel(a, b + 2 * map_height - 1);
                 }
                 if (a < map_sketch.getSize().x - 1) {
@@ -45,84 +43,86 @@ inline void draw_map(unsigned view_x, const sf::Image& map_sketch, sf::RenderWin
                 //Nothing complicated here.
                 //Just a bunch of if's and else's that determine the position of the tile we're gonna draw.
                 //Yeah, I know it's bad.
-                if (sf::Color(255, 255, 255) == pixel) { //Clouds
+                if (pixel == sf::Color(255, 255, 255)) { //Clouds
                     sprite_x = 8;
-                    if (sf::Color(255, 255, 255) == pixel_up) {
+                    if (pixel_up == sf::Color(255, 255, 255)) {
                         sprite_y = 1;
                     }
-                    if (sf::Color(255, 255, 255) == pixel_left) {
-                        if (sf::Color(255, 255, 255) != pixel_right) {
+                    if (pixel_left == sf::Color(255, 255, 255)) {
+                        if (pixel_right != sf::Color(255, 255, 255)) {
                             sprite_x = 9;
                         }
-                    } else if (sf::Color(255, 255, 255) == pixel_right) {
+                    } else if (pixel_right == sf::Color(255, 255, 255)) {
                         sprite_x = 7;
                     }
-                } else if (sf::Color(146, 219, 0) == pixel) { //Grass
+                } else if (pixel == sf::Color(146, 219, 0)) { //Grass
                     sprite_x = 5;
-                    if (sf::Color(146, 219, 0) == pixel_left) {
-                        if (sf::Color(146, 219, 0) != pixel_right) {
+                    if (pixel_left == sf::Color(146, 219, 0)) {
+                        if (pixel_right != sf::Color(146, 219, 0)) {
                             sprite_x = 6;
                         }
-                    } else if (sf::Color(146, 219, 0) == pixel_right) {
+                    } else if (pixel_right == sf::Color(146, 219, 0)) {
                         sprite_x = 4;
                     }
-                } else if (sf::Color(0, 73, 0) == pixel) { //Hills outline
+                } else if (pixel == sf::Color(0, 73, 0)) { //Hills outline
                     sprite_y = 1;
-                    if (sf::Color(0, 109, 0) == pixel_left) {
-                        if (sf::Color(0, 109, 0) != pixel_right) {
+                    if (pixel_left == sf::Color(0, 109, 0)) {
+                        if (pixel_right != sf::Color(0, 109, 0)) {
                             sprite_x = 2;
                         }
-                    } else if (sf::Color(0, 109, 0) == pixel_right) {
+                    } else if (pixel_right == sf::Color(0, 109, 0)) {
                         sprite_x = 1;
                     }
-                } else if (sf::Color(0, 109, 0) == pixel) { //Hills
+                } else if (pixel == sf::Color(0, 109, 0)) { //Hills
                     sprite_x = 4;
                     sprite_y = 1;
-                    if (sf::Color(0, 73, 0) == pixel_left) {
+                    if (pixel_left == sf::Color(0, 73, 0)) {
                         sprite_x = 3;
-                    } else if (sf::Color(0, 73, 0) == pixel_right) {
+                    } else if (pixel_right == sf::Color(0, 73, 0)) {
                         sprite_x = 5;
                     }
-                } else if (sf::Color(109, 255, 85) == pixel) { //Flagpole
+                } else if (pixel == sf::Color(109, 255, 85)) { //Flagpole
                     sprite_x = 12;
-                    if (sf::Color(109, 255, 85) == pixel_up) {
+                    if (pixel_up == sf::Color(109, 255, 85)) {
                         sprite_y = 1;
                     }
                 }
 
-                cell_sprite.setTextureRect(
-                    sf::IntRect(CELL_SIZE * sprite_x, CELL_SIZE * sprite_y, CELL_SIZE, CELL_SIZE));
+                cell_sprite.setTextureRect(sf::IntRect(
+                    CELL_SIZE * sprite_x, CELL_SIZE * sprite_y, CELL_SIZE, CELL_SIZE
+                ));
                 window.draw(cell_sprite);
             }
 
             //Yes, we're drawing the blocks separately from the background tiles.
-            if (Cell::Empty != map[a][b]) {
-                if (Cell::Pipe == map[a][b]) { //Pipes
-                    if (Cell::Pipe == map[a][b - 1]) {
+            if (map[a][b] != Cell::Empty) {
+                if (map[a][b] == Cell::Pipe) { //Pipes
+                    if (map[a][b - 1] == Cell::Pipe) {
                         sprite_y = 1;
                     } else {
                         sprite_y = 0;
                     }
 
-                    if (Cell::Pipe == map[a - 1][b]) {
+                    if (map[a - 1][b] == Cell::Pipe) {
                         sprite_x = 11;
                     } else {
                         sprite_x = 10;
                     }
-                } else if (Cell::QuestionBlock == map[a][b]) { //Question blocks
+                } else if (map[a][b] == Cell::QuestionBlock) { //Question blocks
                     sprite_x = 1;
                     sprite_y = 0;
-                } else if (Cell::Wall == map[a][b]) {
+                } else if (map[a][b] == Cell::Wall) {
                     sprite_y = 0;
-                    if (sf::Color(0, 0, 0) == map_sketch.getPixel(a, b)) { //Walls
+                    if (map_sketch.getPixel(a, b) == sf::Color(0, 0, 0)) { //Walls
                         sprite_x = 2;
                     } else { //Solid blocks
                         sprite_x = 3;
                     }
                 }
 
-                cell_sprite.setTextureRect(
-                    sf::IntRect(CELL_SIZE * sprite_x, CELL_SIZE * sprite_y, CELL_SIZE, CELL_SIZE));
+                cell_sprite.setTextureRect(sf::IntRect(
+                    CELL_SIZE * sprite_x, CELL_SIZE * sprite_y, CELL_SIZE, CELL_SIZE
+                ));
                 window.draw(cell_sprite);
             }
         }

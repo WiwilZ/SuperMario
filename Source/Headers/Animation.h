@@ -26,11 +26,11 @@ public:
         animation_speed(std::max<uint16_t>(1, animation_speed)),
         frame_width(frame_width) {
         texture.loadFromFile(texture_path);
+        sprite.setTexture(texture);
         total_frames = texture.getSize().x / frame_width;
     }
 
     void draw(sf::RenderWindow& window) {
-        sprite.setTexture(texture);
         sprite.setTextureRect(sf::IntRect(frame_width * (flipped + current_frame), 0, flipped ? -frame_width : frame_width, texture.getSize().y));
         window.draw(sprite);
     }
