@@ -1,0 +1,74 @@
+---
+Language: Cpp
+BasedOnStyle: LLVM
+AccessModifierOffset: -4
+AlignConsecutiveAssignments: false
+AlignConsecutiveDeclarations: false
+AlignOperands: false
+AlignTrailingComments: true
+AllowShortBlocksOnASingleLine: false
+AllowShortFunctionsOnASingleLine: None
+AllowShortIfStatementsOnASingleLine: false
+AlwaysBreakAfterDefinitionReturnType: false
+AlwaysBreakTemplateDeclarations: Yes
+BraceWrapping: 
+  AfterCaseLabel: false
+  AfterClass: false
+  AfterControlStatement: false
+  AfterEnum: false
+  AfterFunction: false
+  AfterNamespace: false
+  AfterStruct: false
+  AfterUnion: false
+  AfterExternBlock: false
+  BeforeCatch: false
+  BeforeElse: false
+  BeforeLambdaBody: false
+  BeforeWhile: false
+  SplitEmptyFunction: false
+  SplitEmptyRecord: false
+  SplitEmptyNamespace: false
+BreakBeforeBraces: Custom
+BreakBeforeTernaryOperators: false
+BreakConstructorInitializers: AfterColon
+BreakConstructorInitializersBeforeComma: false
+ColumnLimit: 120
+ConstructorInitializerAllOnOneLineOrOnePerLine: false
+IncludeBlocks: Regroup
+IncludeCategories:
+  # 1. 首选相关头文件 (以双引号开头，且与源文件同名的 .h/.hpp)
+  # 这里利用 clang-format 的默认机制，或者强制匹配
+  - Regex: '^"(.*)\.(h|hpp|hxx)$'
+    Priority: -1
+    CaseSensitive: true
+
+  # 2. C 语言系统库 (通常带 .h 的尖括号文件)
+  - Regex: '^<.*\.(h|H)>'
+    Priority: 1
+
+  # 3. C++ 标准库 (通常不带 .h 的尖括号文件)
+  - Regex: '^<(vector|string|memory|iostream|algorithm|map|set|list|unordered_.*|cmath|cstdio|cstdlib|ctime|thread|mutex|chrono|functional|utility|type_traits|exception|stdexcept|fstream|sstream)>'
+    Priority: 2
+
+  # 4. 其他库/第三方库的头文件 (通常也是尖括号，但不属于标准库)
+  - Regex: '^<.*'
+    Priority: 3
+
+  # 5. 项目内其他头文件 (非同名的双引号文件)
+  - Regex: '^".*'
+    Priority: 4
+IncludeIsMainRegex: '([-_](test|unittest))?$'
+IndentWidth: 4
+InsertNewlineAtEOF: true
+MacroBlockBegin: ''
+MacroBlockEnd: ''
+MaxEmptyLinesToKeep: 3
+PointerAlignment: Left
+SortIncludes: true
+SpaceInEmptyParentheses: false
+SpacesInAngles: false
+SpacesInConditionalStatement: false
+SpacesInCStyleCastParentheses: false
+SpacesInParentheses: false
+TabWidth: 4
+...
